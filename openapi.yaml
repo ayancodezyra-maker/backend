@@ -1,0 +1,3504 @@
+openapi: 3.1.0
+info:
+  title: BidRoom API
+  description: |
+    Complete API documentation for BidRoom - A construction project management platform.
+    
+    ## Authentication
+    All protected endpoints require JWT Bearer token authentication.
+    Include the token in the Authorization header: `Authorization: Bearer <token>`
+    
+    ## Base URL
+    - Development: `http://localhost:5000`
+    - Production: `https://api.bidroom.com`
+    
+    ## Response Format
+    All responses follow a standard format:
+    ```json
+    {
+      "success": true|false,
+      "message": "Description of the result",
+      "data": { ... } | null
+    }
+    ```
+    
+    ## Error Responses
+    - `400` - Bad Request (validation errors, missing fields)
+    - `401` - Unauthorized (missing or invalid token)
+    - `403` - Forbidden (insufficient permissions)
+    - `404` - Not Found (resource doesn't exist)
+    - `500` - Internal Server Error
+    
+  version: 1.0.0
+  contact:
+    name: BidRoom API Support
+    email: support@bidroom.com
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Development server
+  - url: https://api.bidroom.com/api/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User profile management
+  - name: Admin
+    description: Administrative operations (Admin only)
+  - name: Projects
+    description: Project management
+  - name: Milestones
+    description: Project milestone management
+  - name: Bids
+    description: Bid creation and management
+  - name: Jobs
+    description: Job posting and applications
+  - name: Contractors
+    description: Contractor profiles and management
+  - name: Payments
+    description: Payment processing
+  - name: Payouts
+    description: Payout management
+  - name: Conversations
+    description: Conversation management
+  - name: Messages
+    description: Message sending and retrieval
+  - name: Notifications
+    description: Notification management
+  - name: Progress Updates
+    description: Project progress tracking
+  - name: Reviews
+    description: Review and rating system
+  - name: Disputes
+    description: Dispute management
+  - name: Health
+    description: System health checks
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns server health status
+      security: []
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Creates a new user account and automatically logs them in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
+                full_name:
+                  type: string
+                  example: John Doe
+                role_code:
+                  type: string
+                  enum: [VIEWER, SUB, TS, PM, GC]
+                  default: VIEWER
+                  example: VIEWER
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticates user and returns JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@bidroom.com
+                password:
+                  type: string
+                  format: password
+                  example: Test123!@#
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: Returns the authenticated user's profile information
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /auth/update-profile:
+    put:
+      tags:
+        - Authentication
+      summary: Update current user profile
+      description: Updates the authenticated user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                  example: John Doe Updated
+                phone:
+                  type: string
+                  example: +1234567890
+                avatar_url:
+                  type: string
+                  format: uri
+                  example: https://example.com/avatar.jpg
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password
+      description: Changes the authenticated user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+              properties:
+                current_password:
+                  type: string
+                  format: password
+                  example: OldPass123!
+                old_password:
+                  type: string
+                  format: password
+                  example: OldPass123!
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: NewPass123!
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      description: Sends password reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password with token
+      description: Resets password using token from email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - new_password
+              properties:
+                token:
+                  type: string
+                  example: reset-token-here
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: NewPass123!
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /auth/sessions:
+    get:
+      tags:
+        - Authentication
+      summary: Get user sessions
+      description: Returns all active sessions for the authenticated user
+      responses:
+        '200':
+          description: Sessions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /auth/sessions/{id}:
+    delete:
+      tags:
+        - Authentication
+      summary: Delete session
+      description: Logs out a specific session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /auth/verify-email:
+    get:
+      tags:
+        - Authentication
+      summary: Verify email
+      description: Verifies user email with token
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Authentication
+      summary: Resend verification email
+      description: Resends email verification link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /auth/admin/create-user:
+    post:
+      tags:
+        - Authentication
+        - Admin
+      summary: Create user (Admin only)
+      description: Admin endpoint to create new users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role_code
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                full_name:
+                  type: string
+                role_code:
+                  type: string
+                  enum: [SUPER, ADMIN, FIN, SUPPORT, MOD, GC, PM, SUB, TS, VIEWER]
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get user profile
+      description: Returns the authenticated user's profile
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/update:
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Updates the authenticated user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                phone:
+                  type: string
+                avatar_url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /admin/all-users:
+    get:
+      tags:
+        - Admin
+      summary: List all users
+      description: Returns all users in the system (Admin only)
+      responses:
+        '200':
+          description: Users retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/change-role:
+    put:
+      tags:
+        - Admin
+      summary: Change user role
+      description: Changes a user's role (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                role_id:
+                  type: string
+                  format: uuid
+                role_code:
+                  type: string
+                  enum: [SUPER, ADMIN, FIN, SUPPORT, MOD, GC, PM, SUB, TS, VIEWER]
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}/suspend:
+    put:
+      tags:
+        - Admin
+      summary: Suspend user
+      description: Suspends a user account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Violation of terms
+      responses:
+        '200':
+          description: User suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/users/{id}/unsuspend:
+    put:
+      tags:
+        - Admin
+      summary: Unsuspend user
+      description: Reactivates a suspended user account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User unsuspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/verify-user:
+    post:
+      tags:
+        - Admin
+      summary: Verify user manually
+      description: Manually verifies a user (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: User verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /admin/login-logs:
+    get:
+      tags:
+        - Admin
+      summary: Get login logs
+      description: Returns login logs with pagination (Admin only)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [success, failed]
+      responses:
+        '200':
+          description: Login logs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /admin/login-stats:
+    get:
+      tags:
+        - Admin
+      summary: Get login statistics
+      description: Returns login statistics (Admin only)
+      responses:
+        '200':
+          description: Statistics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /projects:
+    post:
+      tags:
+        - Projects
+      summary: Create project
+      description: Creates a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - owner_id
+                - contractor_id
+                - title
+              properties:
+                owner_id:
+                  type: string
+                  format: uuid
+                  example: 12d1664a-85a5-45fe-8f14-6273f056ab0d
+                contractor_id:
+                  type: string
+                  format: uuid
+                  example: 246296fa-27db-4879-bac6-54fd1c8fcab1
+                title:
+                  type: string
+                  example: New Construction Project
+                description:
+                  type: string
+                  example: Project description here
+                budget:
+                  type: number
+                  format: decimal
+                  example: 50000.00
+                total_amount:
+                  type: number
+                  format: decimal
+                  example: 50000.00
+                status:
+                  type: string
+                  enum: [open, in_progress, completed, cancelled]
+                  default: open
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      tags:
+        - Projects
+      summary: Get user projects
+      description: Returns all projects for the authenticated user
+      responses:
+        '200':
+          description: Projects retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /projects/{id}:
+    get:
+      tags:
+        - Projects
+      summary: Get project by ID
+      description: Returns a specific project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Project retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Projects
+      summary: Update project
+      description: Updates a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner_id:
+                  type: string
+                  format: uuid
+                  example: 12d1664a-85a5-45fe-8f14-6273f056ab0d
+                contractor_id:
+                  type: string
+                  format: uuid
+                  example: 246296fa-27db-4879-bac6-54fd1c8fcab1
+                title:
+                  type: string
+                description:
+                  type: string
+                budget:
+                  type: number
+                  format: decimal
+                status:
+                  type: string
+                  enum: [open, in_progress, completed, cancelled]
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      tags:
+        - Projects
+      summary: Delete project
+      description: Deletes a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /milestones/projects/{projectId}:
+    post:
+      tags:
+        - Milestones
+      summary: Create milestone
+      description: Creates a milestone for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  example: Foundation Complete
+                description:
+                  type: string
+                  example: Milestone description
+                due_date:
+                  type: string
+                  format: date-time
+                payment_amount:
+                  type: number
+                  format: decimal
+                order_number:
+                  type: integer
+                  default: 1
+                status:
+                  type: string
+                  enum: [not_started, in_progress, completed, approved]
+                  default: not_started
+      responses:
+        '201':
+          description: Milestone created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      tags:
+        - Milestones
+      summary: Get project milestones
+      description: Returns all milestones for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Milestones retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /milestones/{id}:
+    put:
+      tags:
+        - Milestones
+      summary: Update milestone
+      description: Updates a milestone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                due_date:
+                  type: string
+                  format: date-time
+                payment_amount:
+                  type: number
+                  format: decimal
+                status:
+                  type: string
+                  enum: [not_started, in_progress, completed, approved]
+      responses:
+        '200':
+          description: Milestone updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /milestones/{id}/submit:
+    post:
+      tags:
+        - Milestones
+      summary: Submit milestone
+      description: Submits a milestone for approval
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Milestone submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /milestones/{id}/approve:
+    post:
+      tags:
+        - Milestones
+      summary: Approve milestone
+      description: Approves a milestone (Admin/GC only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Milestone approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bids:
+    post:
+      tags:
+        - Bids
+      summary: Create bid
+      description: Creates a new bid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - project_id
+                - amount
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                  example: 6c40c50f-b042-47bf-9dba-c0ac69d9a181
+                amount:
+                  type: number
+                  format: decimal
+                  example: 15000.00
+                notes:
+                  type: string
+                  example: Additional notes about the bid
+      responses:
+        '201':
+          description: Bid created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      tags:
+        - Bids
+      summary: Get all bids
+      description: Returns all bids accessible to the user
+      responses:
+        '200':
+          description: Bids retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /bids/{id}:
+    get:
+      tags:
+        - Bids
+      summary: Get bid by ID
+      description: Returns a specific bid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bid retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    put:
+      tags:
+        - Bids
+      summary: Update bid
+      description: Updates a bid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: decimal
+                notes:
+                  type: string
+                status:
+                  type: string
+                  enum: [open, accepted, rejected, withdrawn]
+      responses:
+        '200':
+          description: Bid updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bids/{bidId}/submit:
+    post:
+      tags:
+        - Bids
+      summary: Submit bid
+      description: Submits a bid for consideration
+      parameters:
+        - name: bidId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Bid submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /bids/{bidId}/submissions:
+    get:
+      tags:
+        - Bids
+      summary: Get bid submissions
+      description: Returns all submissions for a bid (GC/Admin only)
+      parameters:
+        - name: bidId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Submissions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bids/submissions/my:
+    get:
+      tags:
+        - Bids
+      summary: Get my bid submissions
+      description: Returns all bid submissions by the authenticated user
+      responses:
+        '200':
+          description: Submissions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /jobs:
+    post:
+      tags:
+        - Jobs
+      summary: Create job
+      description: Creates a new job posting (PM/Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - location
+                - trade_type
+              properties:
+                title:
+                  type: string
+                  example: Electrician Needed
+                description:
+                  type: string
+                  example: Need licensed electrician for commercial project
+                location:
+                  type: string
+                  example: Los Angeles, CA
+                trade_type:
+                  type: string
+                  example: Electrical
+                specialization:
+                  type: string
+                  example: Commercial
+                budget_min:
+                  type: number
+                  format: decimal
+                  example: 5000.00
+                budget_max:
+                  type: number
+                  format: decimal
+                  example: 15000.00
+                start_date:
+                  type: string
+                  format: date-time
+                end_date:
+                  type: string
+                  format: date-time
+                requirements:
+                  type: object
+                  example: { "license": true, "experience": "5+ years" }
+                images:
+                  type: array
+                  items:
+                    type: string
+                  example: ["https://example.com/image1.jpg"]
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      tags:
+        - Jobs
+      summary: Get all jobs
+      description: Returns all open jobs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, filled]
+        - name: trade_type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Jobs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /jobs/{id}:
+    get:
+      tags:
+        - Jobs
+      summary: Get job by ID
+      description: Returns a specific job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Jobs
+      summary: Update job
+      description: Updates a job (PM/Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                  enum: [open, closed, filled]
+      responses:
+        '200':
+          description: Job updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /jobs/{jobId}/apply:
+    post:
+      tags:
+        - Jobs
+      summary: Apply to job
+      description: Submits an application for a job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cover_letter:
+                  type: string
+                proposed_rate:
+                  type: number
+                  format: decimal
+      responses:
+        '201':
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /jobs/{jobId}/applications:
+    get:
+      tags:
+        - Jobs
+      summary: Get job applications
+      description: Returns all applications for a job (PM/Admin only)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Applications retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /jobs/applications/{applicationId}/status:
+    put:
+      tags:
+        - Jobs
+      summary: Update application status
+      description: Updates the status of a job application (PM/Admin only)
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [pending, accepted, rejected]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /contractors:
+    get:
+      tags:
+        - Contractors
+      summary: Get all contractors
+      description: Returns all contractors
+      parameters:
+        - name: trade_type
+          in: query
+          schema:
+            type: string
+        - name: availability_status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contractors retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /contractors/search:
+    get:
+      tags:
+        - Contractors
+      summary: Search contractors
+      description: Searches contractors by various criteria
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: trade_type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /contractors/{id}:
+    get:
+      tags:
+        - Contractors
+      summary: Get contractor by ID
+      description: Returns a specific contractor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contractor retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Contractors
+      summary: Update contractor
+      description: Updates contractor profile (own profile or Admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                phone:
+                  type: string
+                avatar_url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Contractor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /contractors/profiles/{userId}:
+    get:
+      tags:
+        - Contractors
+      summary: Get contractor profile
+      description: Returns contractor profile details
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /contractors/profiles:
+    post:
+      tags:
+        - Contractors
+      summary: Create or update contractor profile
+      description: Creates or updates contractor profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_name:
+                  type: string
+                license_number:
+                  type: string
+                insurance_amount:
+                  type: number
+                  format: decimal
+                years_in_business:
+                  type: integer
+                specialties:
+                  type: array
+                  items:
+                    type: string
+                portfolio:
+                  type: array
+                  items:
+                    type: object
+                certifications:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Profile saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /contractors/profiles/{userId}/verify:
+    put:
+      tags:
+        - Contractors
+        - Admin
+      summary: Verify contractor
+      description: Verifies a contractor profile (Admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - verified
+              properties:
+                verified:
+                  type: boolean
+                  example: true
+                license_verified:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Verification status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /payments:
+    post:
+      tags:
+        - Payments
+      summary: Create payment
+      description: Creates a payment record (GC/Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - project_id
+                - amount
+                - paid_to
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                milestone_id:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                  format: decimal
+                paid_to:
+                  type: string
+                  format: uuid
+                payment_method:
+                  type: string
+                payment_date:
+                  type: string
+                  format: date-time
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      tags:
+        - Payments
+      summary: Get all payments
+      description: Returns all payments (GC/Admin only)
+      responses:
+        '200':
+          description: Payments retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /payments/{id}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment by ID
+      description: Returns a specific payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    put:
+      tags:
+        - Payments
+      summary: Update payment
+      description: Updates a payment (GC/Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: decimal
+                status:
+                  type: string
+                  enum: [pending, completed, failed, refunded]
+                payment_date:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Payment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /payments/projects/{projectId}:
+    get:
+      tags:
+        - Payments
+      summary: Get project payments
+      description: Returns all payments for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payments retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /payouts:
+    post:
+      tags:
+        - Payouts
+      summary: Create payout
+      description: Creates a payout record (GC/Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_id
+                - amount
+              properties:
+                payment_id:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                  format: decimal
+                payout_method:
+                  type: string
+                payout_date:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Payout created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      tags:
+        - Payouts
+      summary: Get all payouts
+      description: Returns all payouts (GC/Admin only)
+      responses:
+        '200':
+          description: Payouts retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /payouts/{id}:
+    get:
+      tags:
+        - Payouts
+      summary: Get payout by ID
+      description: Returns a specific payout
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payout retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /payouts/{id}/status:
+    put:
+      tags:
+        - Payouts
+      summary: Update payout status
+      description: Updates payout status (GC/Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [pending, processing, completed, failed]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /conversations:
+    post:
+      tags:
+        - Conversations
+      summary: Get or create conversation
+      description: Gets existing conversation or creates a new one
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                job_id:
+                  type: string
+                  format: uuid
+                bid_id:
+                  type: string
+                  format: uuid
+                contractor_id:
+                  type: string
+                  format: uuid
+                owner_id:
+                  type: string
+                  format: uuid
+                subject:
+                  type: string
+      responses:
+        '200':
+          description: Conversation retrieved or created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+    get:
+      tags:
+        - Conversations
+      summary: Get user conversations
+      description: Returns all conversations for the authenticated user
+      responses:
+        '200':
+          description: Conversations retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /conversations/{id}:
+    get:
+      tags:
+        - Conversations
+      summary: Get conversation by ID
+      description: Returns a specific conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversation retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /messages:
+    post:
+      tags:
+        - Messages
+      summary: Send message
+      description: Sends a message in a conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - conversation_id
+                - content
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                  example: Hello, I have a question about the project
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                  example: ["https://example.com/file.pdf"]
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /messages/conversations/{conversationId}:
+    get:
+      tags:
+        - Messages
+      summary: Get conversation messages
+      description: Returns all messages in a conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /messages/conversations/{conversationId}/read:
+    put:
+      tags:
+        - Messages
+      summary: Mark messages as read
+      description: Marks all messages in a conversation as read
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Messages marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /messages/unread/count:
+    get:
+      tags:
+        - Messages
+      summary: Get unread message count
+      description: Returns count of unread messages
+      responses:
+        '200':
+          description: Count retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /notifications:
+    post:
+      tags:
+        - Notifications
+      summary: Create notification
+      description: Creates a notification (Admin/System only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - type
+                - title
+                - message
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [info, warning, error, success]
+                  example: info
+                title:
+                  type: string
+                  example: New Message
+                message:
+                  type: string
+                  example: You have a new message
+                body:
+                  type: string
+                  example: You have a new message
+                priority:
+                  type: string
+                  enum: [low, normal, high, urgent]
+                  default: normal
+                job_id:
+                  type: string
+                  format: uuid
+                application_id:
+                  type: string
+                  format: uuid
+                bid_id:
+                  type: string
+                  format: uuid
+                project_id:
+                  type: string
+                  format: uuid
+                milestone_id:
+                  type: string
+                  format: uuid
+                dispute_id:
+                  type: string
+                  format: uuid
+                action_url:
+                  type: string
+                  format: uri
+      responses:
+        '201':
+          description: Notification created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags:
+        - Notifications
+      summary: Get user notifications
+      description: Returns all notifications for the authenticated user
+      parameters:
+        - name: read
+          in: query
+          schema:
+            type: boolean
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notifications retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /notifications/{id}:
+    put:
+      tags:
+        - Notifications
+      summary: Mark notification as read
+      description: Marks a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+    delete:
+      tags:
+        - Notifications
+      summary: Delete notification
+      description: Deletes a notification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /notifications/read/all:
+    put:
+      tags:
+        - Notifications
+      summary: Mark all notifications as read
+      description: Marks all notifications as read for the authenticated user
+      responses:
+        '200':
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /notifications/unread/count:
+    get:
+      tags:
+        - Notifications
+      summary: Get unread notification count
+      description: Returns count of unread notifications
+      responses:
+        '200':
+          description: Count retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /progress-updates:
+    post:
+      tags:
+        - Progress Updates
+      summary: Create progress update
+      description: Creates a progress update for a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - project_id
+                - work_completed
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                milestone_id:
+                  type: string
+                  format: uuid
+                update_type:
+                  type: string
+                  enum: [daily, weekly, milestone]
+                  default: daily
+                work_completed:
+                  type: string
+                  example: Completed foundation work
+                work_planned:
+                  type: string
+                issues:
+                  type: string
+                hours_worked:
+                  type: number
+                  format: decimal
+                crew_members:
+                  type: integer
+                photos:
+                  type: array
+                  items:
+                    type: string
+                videos:
+                  type: array
+                  items:
+                    type: string
+                gps_location:
+                  type: object
+                weather_conditions:
+                  type: string
+      responses:
+        '201':
+          description: Progress update created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /progress-updates/projects/{projectId}:
+    get:
+      tags:
+        - Progress Updates
+      summary: Get project progress updates
+      description: Returns all progress updates for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Progress updates retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /progress-updates/{id}:
+    get:
+      tags:
+        - Progress Updates
+      summary: Get progress update by ID
+      description: Returns a specific progress update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Progress update retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reviews:
+    post:
+      tags:
+        - Reviews
+      summary: Create review
+      description: Creates a review for a contractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reviewee_id
+                - rating_overall
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                reviewee_id:
+                  type: string
+                  format: uuid
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                rating_overall:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  example: 5
+                rating_quality:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                rating_communication:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+                body:
+                  type: string
+                title:
+                  type: string
+                  example: Excellent work!
+                project_type:
+                  type: string
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /reviews/contractors/{contractorId}:
+    get:
+      tags:
+        - Reviews
+      summary: Get contractor reviews
+      description: Returns all reviews for a contractor
+      parameters:
+        - name: contractorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reviews retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+
+  /reviews/{id}:
+    get:
+      tags:
+        - Reviews
+      summary: Get review by ID
+      description: Returns a specific review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviews/{id}/response:
+    post:
+      tags:
+        - Reviews
+      summary: Add review response
+      description: Adds a response to a review (contractor only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - response
+              properties:
+                response:
+                  type: string
+                  example: Thank you for your feedback!
+      responses:
+        '200':
+          description: Response added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /disputes:
+    post:
+      tags:
+        - Disputes
+      summary: File dispute
+      description: Files a dispute for a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - project_id
+                - reason
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                milestone_id:
+                  type: string
+                  format: uuid
+                dispute_type:
+                  type: string
+                  enum: [quality, payment, timeline, other]
+                  default: quality
+                description:
+                  type: string
+                reason:
+                  type: string
+                  example: Work quality issues
+                evidence:
+                  type: object
+                amount_disputed:
+                  type: number
+                  format: decimal
+                desired_resolution:
+                  type: string
+      responses:
+        '201':
+          description: Dispute filed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /disputes/projects/{projectId}:
+    get:
+      tags:
+        - Disputes
+      summary: Get project disputes
+      description: Returns all disputes for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Disputes retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /disputes/{id}:
+    get:
+      tags:
+        - Disputes
+      summary: Get dispute by ID
+      description: Returns a specific dispute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dispute retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /disputes/{id}/status:
+    put:
+      tags:
+        - Disputes
+        - Admin
+      summary: Update dispute status
+      description: Updates dispute status (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, review, resolved]
+                resolution:
+                  type: string
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /disputes/{id}/assign:
+    put:
+      tags:
+        - Disputes
+        - Admin
+      summary: Assign dispute to admin
+      description: Assigns a dispute to an admin (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - adminId
+              properties:
+                adminId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Dispute assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login or /auth/signup
+
+  schemas:
+    StandardResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+        data:
+          oneOf:
+            - type: object
+            - type: array
+            - type: null
+          example: null
+
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Server is healthy
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: ok
+            timestamp:
+              type: string
+              format: date-time
+            uptime:
+              type: number
+            environment:
+              type: string
+              example: development
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Login successful
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            expires_at:
+              type: integer
+            user:
+              $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 12d1664a-85a5-45fe-8f14-6273f056ab0d
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        full_name:
+          type: string
+          example: John Doe
+        role_code:
+          type: string
+          enum: [SUPER, ADMIN, FIN, SUPPORT, MOD, GC, PM, SUB, TS, VIEWER]
+          example: GC
+        user_type:
+          type: string
+          enum: [ADMIN_USER, APP_USER]
+          example: APP_USER
+        phone:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      required:
+        - id
+        - title
+        - owner_id
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        budget:
+          type: number
+          format: decimal
+          nullable: true
+        owner_id:
+          type: string
+          format: uuid
+          description: Project owner (required, NOT NULL)
+        contractor_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [open, in_progress, completed, cancelled]
+          default: open
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Milestone:
+      type: object
+      required:
+        - id
+        - project_id
+        - title
+        - payment_amount
+        - order_number
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        payment_amount:
+          type: number
+          format: decimal
+          default: 0
+          description: Payment amount (required, NOT NULL, default 0)
+        order_number:
+          type: integer
+        status:
+          type: string
+          enum: [not_started, in_progress, completed, approved, pending_review]
+          default: not_started
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Bid:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        amount:
+          type: number
+          format: decimal
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        submitted_by:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+          default: pending
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last update timestamp
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        trade_type:
+          type: string
+        specialization:
+          type: string
+          nullable: true
+        budget_min:
+          type: number
+          format: decimal
+          nullable: true
+        budget_max:
+          type: number
+          format: decimal
+          nullable: true
+        project_manager_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, closed, filled]
+        requirements:
+          type: object
+        images:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Contractor:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        company_name:
+          type: string
+          nullable: true
+        license_number:
+          type: string
+          nullable: true
+        insurance_amount:
+          type: number
+          format: decimal
+          nullable: true
+        years_in_business:
+          type: integer
+          nullable: true
+        specialties:
+          type: array
+          items:
+            type: string
+        portfolio:
+          type: array
+          items:
+            type: object
+        certifications:
+          type: array
+          items:
+            type: object
+        verified:
+          type: boolean
+        license_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      required:
+        - id
+        - project_id
+        - payment_type
+        - paid_to
+        - amount
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+          description: Project ID (required, NOT NULL)
+        milestone_id:
+          type: string
+          format: uuid
+          nullable: true
+        amount:
+          type: number
+          format: decimal
+        paid_to:
+          type: string
+          format: uuid
+          description: Payment recipient (required, NOT NULL, auto-determined from payment_type)
+        payment_type:
+          type: string
+          enum: [milestone, deposit, final, refund]
+          description: Payment type (required, NOT NULL) - determines paid_to automatically
+        released_by:
+          type: string
+          format: uuid
+          nullable: true
+        released_to:
+          type: string
+          format: uuid
+          nullable: true
+        payment_method:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [escrow, released, refunded]
+          default: escrow
+        created_at:
+          type: string
+          format: date-time
+          description: Payment creation timestamp (required, NOT NULL)
+
+    Payout:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        payout_method:
+          type: string
+          nullable: true
+        payout_date:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        job_id:
+          type: string
+          format: uuid
+          nullable: true
+        bid_id:
+          type: string
+          format: uuid
+          nullable: true
+        owner_id:
+          type: string
+          format: uuid
+        contractor_id:
+          type: string
+          format: uuid
+        subject:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: string
+        read:
+          type: boolean
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [info, warning, error, success]
+        title:
+          type: string
+        message:
+          type: string
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        is_read:
+          type: boolean
+        read:
+          type: boolean
+        job_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ProgressUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        milestone_id:
+          type: string
+          format: uuid
+          nullable: true
+        contractor_id:
+          type: string
+          format: uuid
+        update_type:
+          type: string
+          enum: [daily, weekly, milestone]
+        work_completed:
+          type: string
+        work_planned:
+          type: string
+          nullable: true
+        issues:
+          type: string
+          nullable: true
+        hours_worked:
+          type: number
+          format: decimal
+          nullable: true
+        crew_members:
+          type: integer
+          nullable: true
+        photos:
+          type: array
+          items:
+            type: string
+        videos:
+          type: array
+          items:
+            type: string
+        gps_location:
+          type: object
+          nullable: true
+        weather_conditions:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        reviewer_id:
+          type: string
+          format: uuid
+        reviewee_id:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        rating_overall:
+          type: integer
+          minimum: 1
+          maximum: 5
+        rating_quality:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        rating_communication:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        helpful_count:
+          type: integer
+        response:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Dispute:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        milestone_id:
+          type: string
+          format: uuid
+          nullable: true
+        raised_by:
+          type: string
+          format: uuid
+        created_by:
+          type: string
+          format: uuid
+        dispute_type:
+          type: string
+          enum: [quality, payment, timeline, other]
+        description:
+          type: string
+          nullable: true
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [open, review, resolved]
+        evidence:
+          type: object
+          nullable: true
+        amount_disputed:
+          type: number
+          format: decimal
+          nullable: true
+        desired_resolution:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    JobApplication:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        contractor_id:
+          type: string
+          format: uuid
+        cover_letter:
+          type: string
+          nullable: true
+        proposed_rate:
+          type: number
+          format: decimal
+          nullable: true
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        created_at:
+          type: string
+          format: date-time
+
+    BidSubmission:
+      type: object
+      required:
+        - id
+        - bid_id
+        - contractor_id
+        - amount
+        - created_by
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        bid_id:
+          type: string
+          format: uuid
+        contractor_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        proposal:
+          type: string
+          nullable: true
+        timeline_days:
+          type: integer
+          nullable: true
+        documents:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          nullable: true
+          description: Additional notes for the bid submission
+        status:
+          type: string
+          enum: [submitted, pending, accepted, rejected]
+          default: submitted
+        created_by:
+          type: string
+          format: uuid
+          description: User who created the submission (required, NOT NULL, auto-set from JWT)
+        submitted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        ip_address:
+          type: string
+        device:
+          type: string
+        login_time:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+
+    LoginLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        status:
+          type: string
+          enum: [success, failed]
+        ip_address:
+          type: string
+        device:
+          type: string
+        failure_reason:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    LoginStats:
+      type: object
+      properties:
+        failed_attempts_last_30_days:
+          type: integer
+        successful_logins_30_days:
+          type: integer
+        top_ips:
+          type: array
+          items:
+            type: object
+        top_devices:
+          type: array
+          items:
+            type: object
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error message here
+        data:
+          type: null
+          example: null
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error or missing fields
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            message: Missing required fields
+            data: null
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            message: Unauthorized
+            data: null
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            message: Permission denied
+            data: null
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            message: Resource not found
+            data: null
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            message: Internal server error
+            data: null
+

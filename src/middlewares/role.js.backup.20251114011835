@@ -1,0 +1,27 @@
+import { supabase } from "../config/supabaseClient.js";
+
+export const requireRole = (allowedRoles) => {
+  return async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role_id, roles(name)")
+        .eq("id", userId)
+        .single();
+
+      if (!profile) return res.status(401).json({ error: "Profile not found" });
+
+      const roleName = profile.roles.name;
+
+      if (!allowedRoles.includes(roleName)) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      next();
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
+};

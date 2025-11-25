@@ -52,7 +52,22 @@ export const swaggerSetup = (app) => {
       const docCopy = JSON.parse(JSON.stringify(swaggerDocument));
       
       // Get the base URL from the request
-      const protocol = req.protocol || (req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
+      // Vercel always uses HTTPS, so prioritize that
+      let protocol = 'https';
+      
+      // Check x-forwarded-proto header (Vercel sets this)
+      if (req.headers['x-forwarded-proto']) {
+        protocol = req.headers['x-forwarded-proto'].split(',')[0].trim();
+      }
+      // If on Vercel or vercel.app domain, force HTTPS
+      else if (process.env.VERCEL || (req.get('host') || req.headers.host || '').includes('vercel.app')) {
+        protocol = 'https';
+      }
+      // Otherwise use req.protocol (for local development)
+      else {
+        protocol = req.protocol || 'http';
+      }
+      
       const host = req.get('host') || req.headers.host;
       const baseUrl = `${protocol}://${host}`;
       

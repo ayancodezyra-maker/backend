@@ -26,15 +26,28 @@ export const swaggerSetup = (app) => {
     }
 
     // Setup Swagger UI with explorer enabled
-    app.use(
-      "/api-docs",
-      swaggerUi.serve,
-      swaggerUi.setup(swaggerDocument, {
-        explorer: true,
-        customCss: ".swagger-ui .topbar { display: none }",
-        customSiteTitle: "BidRoom API Documentation",
-      })
-    );
+    // For Vercel/serverless: Use CDN assets to avoid static file serving issues
+    const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
+    
+    const swaggerUiOptions = {
+      explorer: true,
+      customCss: ".swagger-ui .topbar { display: none }",
+      customSiteTitle: "BidRoom API Documentation",
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    };
+    
+    // Use CDN assets on Vercel to avoid static file serving issues
+    if (isVercel) {
+      swaggerUiOptions.customJs = [
+        "https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js",
+        "https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js",
+      ];
+      swaggerUiOptions.customCssUrl = "https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css";
+    }
+    
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerUiOptions));
 
     console.log("✅ Swagger UI loaded successfully from openapi.yaml");
     return swaggerDocument;

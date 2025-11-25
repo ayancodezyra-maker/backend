@@ -74,7 +74,7 @@ app.get("/", (req, res) => {
       endpoints: {
         health: "/api/health",
         api: "/api/v1",
-        documentation: process.env.NODE_ENV !== 'production' ? "/api-docs" : null,
+        documentation: "/api-docs",
       },
     },
   });

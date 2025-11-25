@@ -47,7 +47,41 @@ export const swaggerSetup = (app) => {
       swaggerUiOptions.customCssUrl = "https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css";
     }
     
-    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerUiOptions));
+    // Serve dynamic OpenAPI spec with current server URL
+    app.get("/api-docs/swagger.json", (req, res) => {
+      const docCopy = JSON.parse(JSON.stringify(swaggerDocument));
+      
+      // Get the base URL from the request
+      const protocol = req.protocol || (req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
+      const host = req.get('host') || req.headers.host;
+      const baseUrl = `${protocol}://${host}`;
+      
+      // Update servers array with dynamic URL
+      docCopy.servers = [
+        {
+          url: `${baseUrl}/api/v1`,
+          description: process.env.VERCEL ? 'Vercel deployment' : 'Current server'
+        },
+        {
+          url: "http://localhost:5000/api/v1",
+          description: "Development server (local)"
+        }
+      ];
+      
+      res.setHeader("Content-Type", "application/json");
+      res.send(docCopy);
+    });
+    
+    // Setup Swagger UI to use the dynamic spec endpoint
+    const finalOptions = {
+      ...swaggerUiOptions,
+      swaggerOptions: {
+        ...swaggerUiOptions.swaggerOptions,
+        url: "/api-docs/swagger.json", // Use the dynamic spec endpoint
+      },
+    };
+    
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(null, finalOptions));
 
     console.log("✅ Swagger UI loaded successfully from openapi.yaml");
     return swaggerDocument;

@@ -62,6 +62,24 @@ app.get("/reset-password", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "reset-password.html"));
 });
 
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Backend API Server",
+    data: {
+      version: "1.0.0",
+      status: "running",
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        health: "/api/health",
+        api: "/api/v1",
+        documentation: process.env.NODE_ENV !== 'production' ? "/api-docs" : null,
+      },
+    },
+  });
+});
+
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({

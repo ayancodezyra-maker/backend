@@ -15,6 +15,7 @@ import {
   suspendUser,
   unsuspendUser,
   deleteUserSoft,
+  deleteUserHard,
   restoreUser,
   lockUser,
   unlockUser
@@ -93,11 +94,20 @@ router.put(
   unsuspendUser
 );
 
+// Soft delete user (deactivates but keeps data)
 router.put(
   "/users/:id/delete",
   auth,
   requireRole(["SUPER", "ADMIN"]),
   deleteUserSoft
+);
+
+// Hard delete user (permanently removes user and all data)
+router.delete(
+  "/users/:id",
+  auth,
+  requireRole(["SUPER", "ADMIN"]),
+  deleteUserHard
 );
 
 router.put(

@@ -689,4 +689,71 @@ export const unlockUser = async (req, res) => {
     return res.status(500).json(formatResponse(false, e.message, null));
   }
 };
+
+// Hard delete user (permanently delete)
+export const deleteUserHard = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json(formatResponse(false, "User ID is required", null));
+    }
+
+    // Prevent deleting yourself
+    if (req.user.id === id) {
+      return res.status(400).json(formatResponse(false, "You cannot delete your own account", null));
+    }
+
+    // Verify user exists
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .eq("id", id)
+      .single();
+
+    if (profileError || !profile) {
+      return res.status(404).json(formatResponse(false, "User not found", null));
+    }
+
+    // Delete all user sessions
+    await supabase
+      .from("sessions")
+      .delete()
+      .eq("user_id", id);
+
+    // Delete profile
+    const { error: deleteError } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      return res.status(400).json(formatResponse(false, `Failed to delete profile: ${deleteError.message}`, null));
+    }
+
+    // Delete user from Supabase Auth (requires admin client)
+    try {
+      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(id);
+      if (authDeleteError) {
+        // Log error but don't fail if auth user doesn't exist
+        console.error("Error deleting auth user:", authDeleteError.message);
+      }
+    } catch (authError) {
+      console.error("Error deleting from auth:", authError.message);
+      // Continue even if auth deletion fails
+    }
+
+    // Delete from failed_logins if email exists
+    if (profile.email) {
+      await supabase
+        .from("failed_logins")
+        .delete()
+        .eq("email", profile.email);
+    }
+
+    return res.json(formatResponse(true, "User permanently deleted", null));
+  } catch (e) {
+    return res.status(500).json(formatResponse(false, e.message, null));
+  }
+};
 /* CURSOR PATCH END */

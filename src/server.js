@@ -62,24 +62,6 @@ app.get("/reset-password", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "reset-password.html"));
 });
 
-// Root endpoint
-app.get("/", (req, res) => {
-  res.json({
-    success: true,
-    message: "Backend API Server",
-    data: {
-      version: "1.0.0",
-      status: "running",
-      timestamp: new Date().toISOString(),
-      endpoints: {
-        health: "/api/health",
-        api: "/api/v1",
-        documentation: "/api-docs",
-      },
-    },
-  });
-});
-
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({
@@ -95,8 +77,10 @@ app.get("/api/health", (req, res) => {
 });
 
 // API Documentation (Swagger)
-swaggerSetup(app);
-logger.info('Swagger documentation available at /api-docs');
+if (process.env.NODE_ENV !== 'production') {
+  swaggerSetup(app);
+  logger.info('Swagger documentation available at /api-docs');
+}
 
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -176,28 +160,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Export app for Vercel serverless functions
-export default app;
+// Start server
+const PORT = process.env.PORT || 5000;
 
-// Start server only if not running on Vercel
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  logger.info(`🚀 Backend server running on port ${PORT}`);
+  logger.info(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+  logger.info(`🏥 Health Check: http://localhost:${PORT}/api/health`);
+  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
 
-  app.listen(PORT, () => {
-    logger.info(`🚀 Backend server running on port ${PORT}`);
-    logger.info(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-    logger.info(`🏥 Health Check: http://localhost:${PORT}/api/health`);
-    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM signal received: closing HTTP server');
+  process.exit(0);
+});
 
-  // Graceful shutdown
-  process.on('SIGTERM', () => {
-    logger.info('SIGTERM signal received: closing HTTP server');
-    process.exit(0);
-  });
-
-  process.on('SIGINT', () => {
-    logger.info('SIGINT signal received: closing HTTP server');
-    process.exit(0);
-  });
-}
+process.on('SIGINT', () => {
+  logger.info('SIGINT signal received: closing HTTP server');
+  process.exit(0);
+});

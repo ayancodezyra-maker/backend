@@ -609,6 +609,171 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /admin/users/{id}/delete:
+    put:
+      tags:
+        - Admin
+      summary: Soft delete user
+      description: Deactivates a user account (soft delete - can be restored) (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User deactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/users/{id}:
+    delete:
+      tags:
+        - Admin
+      summary: Hard delete user
+      description: Permanently deletes a user account and all associated data (Admin only). This action cannot be undone. You cannot delete your own account.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User permanently deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/users/{id}/restore:
+    put:
+      tags:
+        - Admin
+      summary: Restore user
+      description: Restores a soft-deleted, suspended, or locked user account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/users/{id}/lock:
+    put:
+      tags:
+        - Admin
+      summary: Lock user
+      description: Locks a user account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Security violation
+      responses:
+        '200':
+          description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/users/{id}/unlock:
+    put:
+      tags:
+        - Admin
+      summary: Unlock user
+      description: Unlocks a locked user account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User unlocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/sessions/{user_id}:
+    get:
+      tags:
+        - Admin
+      summary: Get user sessions
+      description: Returns all active sessions for a specific user (Admin only)
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sessions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /admin/verify-user:
     post:
       tags:

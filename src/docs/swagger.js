@@ -26,77 +26,15 @@ export const swaggerSetup = (app) => {
     }
 
     // Setup Swagger UI with explorer enabled
-    // For Vercel/serverless: Use CDN assets to avoid static file serving issues
-    const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
-    
-    const swaggerUiOptions = {
-      explorer: true,
-      customCss: ".swagger-ui .topbar { display: none }",
-      customSiteTitle: "BidRoom API Documentation",
-      swaggerOptions: {
-        persistAuthorization: true,
-      },
-    };
-    
-    // Use CDN assets on Vercel to avoid static file serving issues
-    if (isVercel) {
-      swaggerUiOptions.customJs = [
-        "https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js",
-        "https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js",
-      ];
-      swaggerUiOptions.customCssUrl = "https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css";
-    }
-    
-    // Serve dynamic OpenAPI spec with current server URL
-    app.get("/api-docs/swagger.json", (req, res) => {
-      const docCopy = JSON.parse(JSON.stringify(swaggerDocument));
-      
-      // Get the base URL from the request
-      // Vercel always uses HTTPS, so prioritize that
-      let protocol = 'https';
-      
-      // Check x-forwarded-proto header (Vercel sets this)
-      if (req.headers['x-forwarded-proto']) {
-        protocol = req.headers['x-forwarded-proto'].split(',')[0].trim();
-      }
-      // If on Vercel or vercel.app domain, force HTTPS
-      else if (process.env.VERCEL || (req.get('host') || req.headers.host || '').includes('vercel.app')) {
-        protocol = 'https';
-      }
-      // Otherwise use req.protocol (for local development)
-      else {
-        protocol = req.protocol || 'http';
-      }
-      
-      const host = req.get('host') || req.headers.host;
-      const baseUrl = `${protocol}://${host}`;
-      
-      // Update servers array with dynamic URL
-      docCopy.servers = [
-        {
-          url: `${baseUrl}/api/v1`,
-          description: process.env.VERCEL ? 'Vercel deployment' : 'Current server'
-        },
-        {
-          url: "http://localhost:5000/api/v1",
-          description: "Development server (local)"
-        }
-      ];
-      
-      res.setHeader("Content-Type", "application/json");
-      res.send(docCopy);
-    });
-    
-    // Setup Swagger UI to use the dynamic spec endpoint
-    const finalOptions = {
-      ...swaggerUiOptions,
-      swaggerOptions: {
-        ...swaggerUiOptions.swaggerOptions,
-        url: "/api-docs/swagger.json", // Use the dynamic spec endpoint
-      },
-    };
-    
-    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(null, finalOptions));
+    app.use(
+      "/api-docs",
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerDocument, {
+        explorer: true,
+        customCss: ".swagger-ui .topbar { display: none }",
+        customSiteTitle: "BidRoom API Documentation",
+      })
+    );
 
     console.log("✅ Swagger UI loaded successfully from openapi.yaml");
     return swaggerDocument;

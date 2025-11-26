@@ -77,10 +77,8 @@ app.get("/api/health", (req, res) => {
 });
 
 // API Documentation (Swagger)
-if (process.env.NODE_ENV !== 'production') {
-  swaggerSetup(app);
-  logger.info('Swagger documentation available at /api-docs');
-}
+swaggerSetup(app);
+logger.info('Swagger documentation available at /api-docs');
 
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
